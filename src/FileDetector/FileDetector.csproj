@@ -14,6 +14,12 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>FileDetector</Product>
+    <Description>Windows tray utility that watches folders and reports new, renamed and deleted items — including changes made while it was not running.</Description>
   </PropertyGroup>
 
   <ItemGroup>
