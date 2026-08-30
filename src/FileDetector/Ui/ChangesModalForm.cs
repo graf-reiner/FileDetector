@@ -133,9 +133,11 @@ public sealed class ChangesModalForm : Form
             RowCount = 3,
             Padding = new Padding(12),
         };
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        // Keeps the single column pinned to the form width instead of auto-sizing past its edge.
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // header
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));   // list
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));   // buttons
 
         _headerLabel.AutoSize = true;
         _headerLabel.Font = new Font(Font.FontFamily, Font.Size + 3f, FontStyle.Bold);
@@ -148,7 +150,7 @@ public sealed class ChangesModalForm : Form
 
         var headerPanel = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Anchor = AnchorStyles.Left,
             FlowDirection = FlowDirection.TopDown,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -173,13 +175,13 @@ public sealed class ChangesModalForm : Form
         _list.SelectedIndexChanged += (_, _) => UpdateButtons();
         _list.DoubleClick += (_, _) => OpenSelectedItem();
 
+        // Fixed-height row with AutoSize off, so the buttons stay inside the form's padding.
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.RightToLeft,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 10, 0, 0),
+            AutoSize = false,
+            Margin = new Padding(0, 8, 0, 0),
         };
 
         _dismissButton.Text = "Dismiss";

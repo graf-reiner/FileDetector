@@ -67,6 +67,72 @@ internal static class SelfTest
         return 1;
     }
 
+    /// <summary>
+    /// <c>FileDetector.exe --screenshot [directory]</c>: renders each window to a PNG. Uses
+    /// <see cref="Control.DrawToBitmap"/> rather than a screen grab, so it works on a machine with
+    /// no desktop — the client area is captured, without the window frame.
+    /// </summary>
+    public static int CaptureUi(string outDir)
+    {
+        AppPaths.EnsureCreated();
+        Directory.CreateDirectory(outDir);
+        ApplicationConfiguration.Initialize();
+
+        var failures = new List<string>();
+
+        var sample = new AppSettings
+        {
+            WatchedFolders =
+            {
+                new WatchedFolder { Path = @"C:\Dropbox\Intake", Enabled = true },
+                new WatchedFolder { Path = @"D:\Scans\Incoming", Enabled = true },
+                new WatchedFolder { Path = @"E:\Archive (offline)", Enabled = false },
+            },
+            DebounceSeconds = 2,
+            RescanMinutes = 5,
+        };
+
+        Check(failures, "settings.png", () => Capture(new SettingsForm(sample), Path.Combine(outDir, "settings.png")));
+        Check(failures, "changes.png", () =>
+        {
+            var modal = new ChangesModalForm();
+            modal.AppendBatch(SyntheticBatch());
+            Capture(modal, Path.Combine(outDir, "changes.png"));
+        });
+        Check(failures, "history.png", () => Capture(new HistoryForm(new HistoryStore()), Path.Combine(outDir, "history.png")));
+
+        foreach (var failure in failures) Log.Error($"screenshot: {failure}");
+        return failures.Count == 0 ? 0 : 1;
+    }
+
+    private static void Capture(Form form, string path)
+    {
+        using (form)
+        {
+            form.StartPosition = FormStartPosition.Manual;
+            form.Location = new Point(0, 0);
+            form.TopMost = false;
+            form.Show();
+
+            // Let layout, group headers and list columns settle before drawing.
+            for (var i = 0; i < 5; i++)
+            {
+                Application.DoEvents();
+                form.Refresh();
+            }
+
+            // Draw at the full window size, not the client size: DrawToBitmap on a Form includes the
+            // title bar and border, so a client-sized bitmap loses the bottom of the window.
+            using var bitmap = new Bitmap(form.Size.Width, form.Size.Height);
+            form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, form.Size));
+            bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+
+            form.Hide();
+        }
+
+        Log.Info($"screenshot written: {path}");
+    }
+
     private static void Check(List<string> failures, string what, Action action)
     {
         try

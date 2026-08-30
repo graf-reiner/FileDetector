@@ -32,8 +32,8 @@ public sealed class SettingsForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
-        ClientSize = new Size(640, 620);
-        MinimumSize = new Size(560, 560);
+        ClientSize = new Size(680, 730);
+        MinimumSize = new Size(620, 690);
         Font = SystemFonts.MessageBoxFont ?? SystemFonts.DefaultFont;
 
         BuildLayout();
@@ -52,11 +52,14 @@ public sealed class SettingsForm : Form
             RowCount = 5,
             Padding = new Padding(12),
         };
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        // Without an explicit column style the single column auto-sizes to its widest child and
+        // pushes content past the form's edge instead of wrapping inside it.
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));   // folders — absorbs slack
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // notifications
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // timing
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));  // ignore patterns
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));   // buttons
 
         root.Controls.Add(BuildFoldersGroup(), 0, 0);
         root.Controls.Add(BuildNotificationsGroup(), 0, 1);
@@ -86,8 +89,8 @@ public sealed class SettingsForm : Form
         _folderList.CheckBoxes = true;
         _folderList.FullRowSelect = true;
         _folderList.HideSelection = false;
-        _folderList.Columns.Add("Folder", 400);
-        _folderList.Columns.Add("Status", 90);
+        _folderList.Columns.Add("Folder", 330);
+        _folderList.Columns.Add("Status", 80);
         _folderList.ItemChecked += (_, _) => _removeButton.Enabled = _folderList.SelectedItems.Count > 0;
         _folderList.SelectedIndexChanged += (_, _) => _removeButton.Enabled = _folderList.SelectedItems.Count > 0;
         _folderList.DoubleClick += (_, _) =>
@@ -144,14 +147,19 @@ public sealed class SettingsForm : Form
             Margin = new Padding(0, 8, 0, 0),
         };
 
-        var flow = new FlowLayoutPanel
+        // A fixed grid rather than a wrapping FlowLayoutPanel: an auto-sizing flow panel reports
+        // its unwrapped width as its preferred size and stretches the whole dialog.
+        var grid = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            RowCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
         };
+        for (var i = 0; i < 3; i++) grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 3f));
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         Configure(_showToast, "Show toast notification");
         Configure(_showModal, "Show popup window");
@@ -160,21 +168,21 @@ public sealed class SettingsForm : Form
         Configure(_notifyModified, "Report modified files");
         Configure(_startWithWindows, "Start with Windows");
 
-        flow.Controls.Add(_showToast);
-        flow.Controls.Add(_showModal);
-        flow.Controls.Add(_notifyRenamed);
-        flow.Controls.Add(_notifyDeleted);
-        flow.Controls.Add(_notifyModified);
-        flow.Controls.Add(_startWithWindows);
+        grid.Controls.Add(_showToast, 0, 0);
+        grid.Controls.Add(_showModal, 1, 0);
+        grid.Controls.Add(_startWithWindows, 2, 0);
+        grid.Controls.Add(_notifyRenamed, 0, 1);
+        grid.Controls.Add(_notifyDeleted, 1, 1);
+        grid.Controls.Add(_notifyModified, 2, 1);
 
-        group.Controls.Add(flow);
+        group.Controls.Add(grid);
         return group;
 
         static void Configure(CheckBox box, string text)
         {
             box.Text = text;
             box.AutoSize = true;
-            box.Margin = new Padding(0, 4, 20, 4);
+            box.Margin = new Padding(0, 4, 12, 4);
         }
     }
 
@@ -190,14 +198,19 @@ public sealed class SettingsForm : Form
             Margin = new Padding(0, 8, 0, 0),
         };
 
-        var flow = new FlowLayoutPanel
+        var grid = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            RowCount = 2,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
         };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         _debounce.DecimalPlaces = 1;
         _debounce.Increment = 0.5m;
@@ -209,14 +222,15 @@ public sealed class SettingsForm : Form
         _rescan.Maximum = 1440;
         _rescan.Width = 70;
 
-        flow.Controls.Add(new Label { Text = "Group changes for", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
-        flow.Controls.Add(_debounce);
-        flow.Controls.Add(new Label { Text = "seconds before notifying", AutoSize = true, Margin = new Padding(6, 6, 24, 0) });
-        flow.Controls.Add(new Label { Text = "Full rescan every", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
-        flow.Controls.Add(_rescan);
-        flow.Controls.Add(new Label { Text = "minutes", AutoSize = true, Margin = new Padding(6, 6, 0, 0) });
+        grid.Controls.Add(new Label { Text = "Group changes for", AutoSize = true, Margin = new Padding(0, 6, 6, 4), Anchor = AnchorStyles.Left }, 0, 0);
+        grid.Controls.Add(_debounce, 1, 0);
+        grid.Controls.Add(new Label { Text = "seconds before notifying", AutoSize = true, Margin = new Padding(6, 6, 0, 4), Anchor = AnchorStyles.Left }, 2, 0);
 
-        group.Controls.Add(flow);
+        grid.Controls.Add(new Label { Text = "Full rescan every", AutoSize = true, Margin = new Padding(0, 6, 6, 4), Anchor = AnchorStyles.Left }, 0, 1);
+        grid.Controls.Add(_rescan, 1, 1);
+        grid.Controls.Add(new Label { Text = "minutes", AutoSize = true, Margin = new Padding(6, 6, 0, 4), Anchor = AnchorStyles.Left }, 2, 1);
+
+        group.Controls.Add(grid);
         return group;
     }
 
@@ -242,13 +256,14 @@ public sealed class SettingsForm : Form
 
     private Control BuildButtons()
     {
+        // Fills a fixed-height row with AutoSize off: an auto-sizing flow panel reports a preferred
+        // size larger than its cell and pushes the buttons past the form's padding.
         var flow = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.RightToLeft,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 10, 0, 0),
+            AutoSize = false,
+            Margin = new Padding(0, 8, 0, 0),
         };
 
         var cancel = new Button { Text = "Cancel", AutoSize = true, Padding = new Padding(10, 3, 10, 3), DialogResult = DialogResult.Cancel };

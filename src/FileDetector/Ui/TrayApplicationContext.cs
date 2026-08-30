@@ -128,6 +128,15 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void ShowSettings()
     {
+        if (!Environment.UserInteractive)
+        {
+            // Launched from a service or a non-interactive session: modal dialogs are illegal there
+            // and would take the whole app down. Watching still works; configure it by editing
+            // settings.json directly.
+            Log.Warn($"cannot show Settings in a non-interactive session; edit {AppPaths.SettingsFile} instead");
+            return;
+        }
+
         if (_settingsForm is { IsDisposed: false })
         {
             _settingsForm.Activate();

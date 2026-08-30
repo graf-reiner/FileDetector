@@ -56,10 +56,17 @@ Only what changes *after* that is reported.
 ### Checking it on a machine with no desktop
 
 ```powershell
-.\publish\FileDetector.exe --selftest-ui   # exit code 0 = every window builds; details in app.log
+.\publish\FileDetector.exe --selftest-ui        # exit 0 = every window builds; details in app.log
+.\publish\FileDetector.exe --screenshot .\shots # renders each window to a PNG
 ```
 
-Useful on servers and in CI, where the tray and windows cannot be inspected by eye.
+Useful on servers and in CI, where the tray and windows cannot be inspected by eye. Note that a
+`DropDownList` combo box paints no text under `DrawToBitmap`, so the History window's filter boxes
+look empty in a screenshot even when a value is selected.
+
+Settings itself needs an interactive session: launched from a service or a non-interactive
+session it logs a warning instead of opening (Windows forbids modal dialogs there). Watching
+still works — configure it by editing `settings.json`.
 
 ## Where state lives
 

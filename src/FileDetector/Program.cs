@@ -19,6 +19,14 @@ internal static class Program
             return;
         }
 
+        var screenshotIndex = Array.FindIndex(args, a => string.Equals(a, "--screenshot", StringComparison.OrdinalIgnoreCase));
+        if (screenshotIndex >= 0)
+        {
+            var outDir = screenshotIndex + 1 < args.Length ? args[screenshotIndex + 1] : Path.Combine(AppPaths.Root, "screenshots");
+            Environment.ExitCode = SelfTest.CaptureUi(outDir);
+            return;
+        }
+
         using var mutex = new Mutex(initiallyOwned: true, MutexName, out var isFirstInstance);
         if (!isFirstInstance)
         {

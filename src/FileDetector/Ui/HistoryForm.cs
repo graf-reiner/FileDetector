@@ -54,13 +54,15 @@ public sealed class HistoryForm : Form
             RowCount = 3,
             Padding = new Padding(12),
         };
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        // Keeps the single column pinned to the form width instead of auto-sizing past its edge.
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // filters
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));   // list
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));   // buttons
 
         var filters = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Anchor = AnchorStyles.Left,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.LeftToRight,
@@ -97,13 +99,13 @@ public sealed class HistoryForm : Form
         _list.Columns.Add("Folder", 200);
         _list.DoubleClick += (_, _) => OpenSelected();
 
+        // Fixed-height row with AutoSize off, so the buttons stay inside the form's padding.
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.RightToLeft,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 10, 0, 0),
+            AutoSize = false,
+            Margin = new Padding(0, 8, 0, 0),
         };
 
         var close = new Button { Text = "Close", AutoSize = true, Padding = new Padding(10, 3, 10, 3), DialogResult = DialogResult.Cancel };
