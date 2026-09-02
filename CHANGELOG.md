@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Version tracking: `<VersionPrefix>` in the csproj is now the single source of truth, with
+  `AssemblyVersion`/`FileVersion` derived from it and the running version read back at runtime.
+- The build stamps the git commit into `InformationalVersion`, so a shipped exe reports e.g.
+  `1.0.0+ba4899b` and can be traced to the source it came from.
+- The version is shown in the Settings window title and logged at startup.
+- `tools\bump-version.ps1` bumps the version, opens a CHANGELOG section, and optionally commits
+  and tags. `tools\publish-release.ps1` pushes and publishes the GitHub release from those inputs.
+
 ## 1.0.0 — 2026-08-30
 
 First release.

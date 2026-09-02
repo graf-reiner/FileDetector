@@ -27,7 +27,7 @@ public sealed class SettingsForm : Form
     {
         _working = settings.Clone();
 
-        Text = "FileDetector — Settings";
+        Text = $"FileDetector {AppVersion.Display} — Settings";
         Icon = IconProvider.App;
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.Sizable;

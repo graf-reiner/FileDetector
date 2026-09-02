@@ -33,6 +33,42 @@ Then:
 .\build.ps1 -Publish -FrameworkDependent   # ~1 MB, needs the .NET 10 desktop runtime installed
 ```
 
+## Versioning and releases
+
+The version lives in **one** place — `<VersionPrefix>` in `src\FileDetector\FileDetector.csproj`.
+`AssemblyVersion`, `FileVersion`, the version shown in the app, the zip filenames and the git tag are
+all derived from it. Versions are [semver](https://semver.org): `major.minor.patch`.
+
+The build also stamps the git commit into `InformationalVersion`, so any build can be traced back to
+its source:
+
+```powershell
+(Get-Item .\publish\FileDetector.exe).VersionInfo.ProductVersion   # 1.0.0+ba4899b
+```
+
+A build made from a working tree with uncommitted changes is marked `+ba4899b-dirty`. The same string
+is written to `app.log` at startup, and `1.0.0` appears in the Settings window title — so "which
+build is this?" is answerable from a running instance.
+
+### Cutting a release
+
+```powershell
+.\tools\bump-version.ps1 -Show                 # what version are we on?
+.\tools\bump-version.ps1 patch -Commit -Tag    # 1.0.0 -> 1.0.1, commit, tag v1.0.1
+.\build.ps1 -Package                           # test + build both zips into dist\
+.\tools\publish-release.ps1                    # push, then create the GitHub release
+```
+
+`bump-version.ps1` takes `major`, `minor`, `patch`, or an explicit `1.2.0`. It refuses to run on a
+dirty working tree (so the bump commit contains only the bump) or to reuse an existing tag. If the
+CHANGELOG has an `## Unreleased` section it is promoted to the new version and dated; otherwise a
+stub is inserted for you to fill in.
+
+`publish-release.ps1` refuses to publish if the artifacts in `dist\` do not match the current
+version, if the CHANGELOG section is missing or still says `TODO`, or if the tag does not exist —
+the three ways a release usually goes out wrong. Use `-DryRun` to see what it would do, and
+`-PreRelease` to mark it as such. Re-running it updates the existing release instead of duplicating.
+
 ## Using it
 
 Run `FileDetector.exe`. On first launch it opens **Settings** because nothing is being watched yet.

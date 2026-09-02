@@ -36,7 +36,7 @@ internal static class Program
         }
 
         AppPaths.EnsureCreated();
-        Log.Info($"starting (silent={silent}, exe={StartupRegistration.ExecutablePath})");
+        Log.Info($"starting v{AppVersion.Full} (silent={silent}, exe={StartupRegistration.ExecutablePath})");
 
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         Application.ThreadException += (_, e) => HandleFatal("UI thread exception", e.Exception);

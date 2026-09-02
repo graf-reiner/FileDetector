@@ -31,8 +31,33 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
 
+$csprojPath = Join-Path $PSScriptRoot 'src\FileDetector\FileDetector.csproj'
+
+function Get-ProjectVersion {
+    $value = ([xml](Get-Content $csprojPath)).Project.PropertyGroup.VersionPrefix |
+        Where-Object { $_ } | Select-Object -First 1
+    if (-not $value) { throw "could not read <VersionPrefix> from $csprojPath" }
+    return $value.Trim()
+}
+
+# Stamped into InformationalVersion so a shipped exe can be traced back to a commit. Absent outside
+# a git checkout, which is fine: the version number itself still comes from the csproj.
+function Get-SourceRevision {
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return '' }
+    $sha = & git -C $PSScriptRoot rev-parse --short HEAD 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $sha) { return '' }
+    $dirty = & git -C $PSScriptRoot status --porcelain
+    if ($dirty) { return "$sha-dirty" }
+    return $sha
+}
+
+$revision = Get-SourceRevision
+$versionArgs = @()
+if ($revision) { $versionArgs += "-p:SourceRevisionId=$revision" }
+Write-Host "version: $(Get-ProjectVersion)$(if ($revision) { "+$revision" })" -ForegroundColor DarkGray
+
 Write-Host "== build ($Configuration) ==" -ForegroundColor Cyan
-dotnet build FileDetector.slnx -c $Configuration -v minimal
+dotnet build FileDetector.slnx -c $Configuration -v minimal @versionArgs
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
 
 if (-not $SkipTests) {
@@ -52,6 +77,7 @@ if ($Publish) {
         -p:PublishSingleFile=true `
         -p:IncludeNativeLibrariesForSelfExtract=true `
         -p:EnableCompressionInSingleFile=true `
+        @versionArgs `
         -o publish
     if ($LASTEXITCODE -ne 0) { throw "publish failed" }
 
@@ -63,9 +89,8 @@ if ($Publish) {
 if ($Package) {
     Write-Host "== package ==" -ForegroundColor Cyan
 
-    $csproj = Join-Path $PSScriptRoot 'src\FileDetector\FileDetector.csproj'
-    $version = ([xml](Get-Content $csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
-    if (-not $version) { throw "could not read <Version> from $csproj" }
+    $csproj = $csprojPath
+    $version = Get-ProjectVersion
 
     $dist = Join-Path $PSScriptRoot 'dist'
     if (Test-Path $dist) { Get-ChildItem $dist -File | Remove-Item -Force }
@@ -91,6 +116,7 @@ if ($Package) {
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:EnableCompressionInSingleFile=$compression `
+            @versionArgs `
             -o $stage
         if ($LASTEXITCODE -ne 0) { throw "publish ($($flavour.Name)) failed" }
 
