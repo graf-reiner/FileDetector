@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+Release tooling only — the application itself is unchanged from 1.0.1.
+
+- `tools\publish-release.ps1` no longer aborts when checking whether a release already exists.
+  Windows PowerShell 5.1 wraps a native command's redirected stderr in an `ErrorRecord`, which
+  `ErrorActionPreference = 'Stop'` escalates to a terminating error even on exit code 0; `gh` calls
+  whose output is read or discarded now go through a helper that reads the real exit code.
+
 ## 1.0.1 — 2026-09-02
 
 - Version tracking: `<VersionPrefix>` in the csproj is now the single source of truth, with
