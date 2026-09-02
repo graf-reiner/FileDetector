@@ -22,11 +22,25 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
+# Windows PowerShell 5.1 turns a native command's redirected stderr into an ErrorRecord, which
+# $ErrorActionPreference='Stop' then escalates into a terminating error even when the exe succeeded.
+# Anything that reads gh's output, or ignores it, has to go through here.
+function Invoke-Gh {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GhArgs)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = & gh @GhArgs 2>&1 | Out-String
+        return [pscustomobject]@{ Output = $output.Trim(); ExitCode = $LASTEXITCODE }
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+}
+
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     throw "GitHub CLI not found. Install it, then run: gh auth login"
 }
-& gh auth status *> $null
-if ($LASTEXITCODE -ne 0) { throw "not logged in to GitHub. Run: gh auth login" }
+if ((Invoke-Gh auth status).ExitCode -ne 0) { throw "not logged in to GitHub. Run: gh auth login" }
 
 # The CHANGELOG is UTF-8 with em dashes; PowerShell 5.1's Get-Content/Set-Content would turn those
 # into mojibake in the published release notes, so go through .NET with an explicit encoding.
@@ -83,8 +97,8 @@ if ($LASTEXITCODE -ne 0) { throw "push failed" }
 & git push origin $tag
 if ($LASTEXITCODE -ne 0) { throw "tag push failed" }
 
-$existing = & gh release view $tag --json tagName 2>$null
-if ($LASTEXITCODE -eq 0 -and $existing) {
+$existing = Invoke-Gh release view $tag --json tagName
+if ($existing.ExitCode -eq 0) {
     Write-Host "release $tag already exists - updating notes and re-uploading assets"
     & gh release edit $tag --notes-file $notes
     & gh release upload $tag @assets --clobber
