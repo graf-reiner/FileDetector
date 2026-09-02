@@ -28,8 +28,12 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
 & gh auth status *> $null
 if ($LASTEXITCODE -ne 0) { throw "not logged in to GitHub. Run: gh auth login" }
 
+# The CHANGELOG is UTF-8 with em dashes; PowerShell 5.1's Get-Content/Set-Content would turn those
+# into mojibake in the published release notes, so go through .NET with an explicit encoding.
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
 $csproj = Join-Path $root 'src\FileDetector\FileDetector.csproj'
-if ((Get-Content $csproj -Raw) -notmatch '<VersionPrefix>([^<]+)</VersionPrefix>') {
+if ([System.IO.File]::ReadAllText($csproj) -notmatch '<VersionPrefix>([^<]+)</VersionPrefix>') {
     throw "no <VersionPrefix> element in $csproj"
 }
 $version = $Matches[1].Trim()
@@ -52,7 +56,7 @@ if ($missing) {
 }
 
 # Release notes come from the CHANGELOG section for this version.
-$lines = Get-Content (Join-Path $root 'CHANGELOG.md')
+$lines = [System.IO.File]::ReadAllLines((Join-Path $root 'CHANGELOG.md'))
 $start = ($lines | Select-String -Pattern ("^##\s+" + [regex]::Escape($version)) | Select-Object -First 1)
 if (-not $start) { throw "CHANGELOG.md has no '## $version' section" }
 $rest = $lines[$start.LineNumber..($lines.Count - 1)]
@@ -61,7 +65,7 @@ $body = if ($nextHeading) { $rest[0..($nextHeading.LineNumber - 2)] } else { $re
 if (($body -join '') -match 'TODO') { throw "CHANGELOG section for $version still contains a TODO" }
 
 $notes = Join-Path $env:TEMP "FileDetector-release-notes-$version.md"
-$body | Set-Content $notes -Encoding utf8
+[System.IO.File]::WriteAllLines($notes, [string[]]$body, $Utf8NoBom)
 
 if (-not (& git tag -l $tag)) { throw "tag $tag does not exist (run .\tools\bump-version.ps1 ... -Tag)" }
 

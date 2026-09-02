@@ -31,10 +31,17 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
+# These files are UTF-8 and contain em dashes. Windows PowerShell 5.1's Get-Content/Set-Content
+# default to the ANSI codepage and would rewrite every one of them as mojibake, plus prepend a BOM,
+# so read and write through .NET with an explicit BOM-less UTF-8 encoding instead.
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+function Read-Utf8Lines([string]$path) { [System.IO.File]::ReadAllLines($path) }
+function Write-Utf8Lines([string]$path, $lines) { [System.IO.File]::WriteAllLines($path, [string[]]$lines, $Utf8NoBom) }
+
 $csproj = Join-Path $root 'src\FileDetector\FileDetector.csproj'
 $changelog = Join-Path $root 'CHANGELOG.md'
 
-$csprojText = Get-Content $csproj -Raw
+$csprojText = [System.IO.File]::ReadAllText($csproj)
 if ($csprojText -notmatch '<VersionPrefix>([^<]+)</VersionPrefix>') {
     throw "no <VersionPrefix> element in $csproj"
 }
@@ -71,7 +78,7 @@ if ($existingTag) { throw "tag v$next already exists" }
 
 # 1. The single source of truth.
 $csprojText = $csprojText -replace '<VersionPrefix>[^<]+</VersionPrefix>', "<VersionPrefix>$next</VersionPrefix>"
-Set-Content $csproj -Value $csprojText -NoNewline -Encoding utf8
+[System.IO.File]::WriteAllText($csproj, $csprojText, $Utf8NoBom)
 
 # 2. Open a CHANGELOG section. An existing "## Unreleased" is promoted to the new version; otherwise
 #    a stub is inserted for the notes to be written into before releasing.
@@ -80,7 +87,7 @@ $today = (Get-Date).ToString('yyyy-MM-dd')
 # PowerShell 5.1, which mangles non-ASCII source and breaks the parser.
 $dash = [char]0x2014
 $heading = "## $next $dash $today"
-$lines = [System.Collections.Generic.List[string]](Get-Content $changelog)
+$lines = [System.Collections.Generic.List[string]](Read-Utf8Lines $changelog)
 $unreleased = $lines | Select-String -Pattern '^##\s+Unreleased' | Select-Object -First 1
 
 if ($unreleased) {
@@ -92,7 +99,7 @@ if ($unreleased) {
     $lines.InsertRange($insertAt, [string[]]@('', $heading, '', '- TODO: describe what changed in this release.'))
     $promoted = $false
 }
-Set-Content $changelog -Value $lines -Encoding utf8
+Write-Utf8Lines $changelog $lines
 
 Write-Host "version: $current -> $next" -ForegroundColor Green
 if ($promoted) {
