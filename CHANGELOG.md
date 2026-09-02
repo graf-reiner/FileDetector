@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1 — 2026-09-02
 
 - Version tracking: `<VersionPrefix>` in the csproj is now the single source of truth, with
   `AssemblyVersion`/`FileVersion` derived from it and the running version read back at runtime.

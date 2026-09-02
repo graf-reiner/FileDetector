@@ -21,7 +21,7 @@
       build.ps1 passes SourceRevisionId, which MSBuild appends to InformationalVersion as
       "1.0.0+<short sha>" so a shipped exe can be traced to a commit.
     -->
-    <VersionPrefix>1.0.0</VersionPrefix>
+    <VersionPrefix>1.0.1</VersionPrefix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>
     <Product>FileDetector</Product>
