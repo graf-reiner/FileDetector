@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.2 — 2026-09-02
 
 Release tooling only — the application itself is unchanged from 1.0.1.
 
